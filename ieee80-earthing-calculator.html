@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IEEE 80 Earthing Calculator</title>
+    <style>
+      :root{ --blue:#1976d2; --muted:#6b7280; --line:#cfe0f5; --good:#2e7d32; --warn:#f57c00 }
+      html,body{font-family:Montserrat,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;margin:0;padding:0;color:#0f172a}
+      .shell{max-width:1100px;margin:18px auto;padding:24px}
+      .panel{background:#fff;border-radius:12px;padding:0;border:1px solid #e9f2fb}
+      .panel-header{padding:14px 18px;border-bottom:1px solid #eef6ff;background:linear-gradient(180deg,#fbfdff,#f8fbff);border-top-left-radius:12px;border-top-right-radius:12px}
+      .panel-body{padding:18px}
+    
+      .grid-form {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        align-items: start;
+      }
+      .layout { display: grid; grid-template-columns: 420px 1fr; gap: 20px; align-items: start; }
+      .field label {
+        font-size: 0.92rem;
+        color: var(--muted);
+        font-weight: 700;
+      }
+      .field input {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #cbdcec;
+        border-radius: 10px;
+        padding: 11px 12px;
+        font: inherit;
+        background: #fbfdff;
+      }
+      .field select {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #cbdcec;
+        border-radius: 10px;
+        padding: 11px 12px;
+        font: inherit;
+        background: #fbfdff;
+      }
+      .layout-canvas {
+        width: 100%;
+        height: 600px;
+        border-radius: 12px;
+        border: 1px solid #e6f0fb;
+        background: linear-gradient(180deg,#fbfdff,#f8fbff);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        overflow:hidden;
+      }
+      .legend {
+        display:flex;
+        gap:12px;
+        align-items:center;
+        justify-content:flex-end;
+        margin-bottom:8px;
+      }
+      .legend-item { display:flex; gap:8px; align-items:center; color:var(--muted); font-size:0.95rem; }
+      .swatch { display:inline-block; width:14px; height:10px; border-radius:3px; }
+      .swatch.rod { width:12px; height:12px; border-radius:50%; border:1px solid #c33; }
+      .layout-canvas svg { width:100%; height:100%; }
+      .actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 16px;
+        flex-wrap: wrap;
+      }
+      .btn {
+        border: none;
+        border-radius: 10px;
+        padding: 12px 18px;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .btn-primary {
+        background: var(--blue);
+        color: #fff;
+      }
+      .btn-secondary {
+        background: #fff;
+        color: var(--blue);
+        border: 1px solid var(--line);
+      }
+      .results-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+      .result-card {
+        padding: 16px;
+        border-radius: 14px;
+        background: linear-gradient(180deg, #fbfdff 0%, #f5f9fe 100%);
+        border: 1px solid #d9e7f7;
+      }
+      .result-card .label {
+        color: var(--muted);
+        font-size: 0.9rem;
+        font-weight: 700;
+      }
+      .result-card .value {
+        margin-top: 8px;
+        font-size: 1.35rem;
+        font-weight: 800;
+        color: #0f172a;
+        word-break: break-word;
+      }
+      .result-card.pass .value { color: var(--good); }
+      .result-card.warn .value { color: var(--warn); }
+      .wide {
+        grid-column: 1 / -1;
+      }
+      .summary {
+        margin-top: 16px;
+        padding: 16px;
+        border-radius: 14px;
+        background: #f3f8fe;
+        border-left: 4px solid var(--blue);
+        color: #334155;
+        line-height: 1.7;
+      }
+      .mini-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+      }
+      .mini-table td {
+        padding: 10px 0;
+        border-bottom: 1px solid #edf2f7;
+        vertical-align: top;
+      }
+      .mini-table td:first-child {
+        color: var(--muted);
+        width: 58%;
+        padding-right: 12px;
+      }
+      .helper {
+        color: var(--muted);
+        font-size: 0.92rem;
+        line-height: 1.6;
+      }
+      @media (max-width: 960px) {
+        .layout { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 700px) {
+        .grid-form, .results-grid { grid-template-columns: 1fr; }
+        .shell { padding: 18px 12px 28px; }
+        .panel-body, .panel-header { padding: 16px; }
+      }
+    </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <div class="brand">
+        <h1>IEEE 80 Earthing Calculator</h1>
+        <p>Preliminary grounding design inputs and computed outputs</p>
+      </div>
+      <a class="btn btn-secondary" href="design-calculations.html">Back to Design Calculations</a>
+    </div>
+
+    <div id="calcStatus" class="summary helper" style="margin-top:12px; background:#fffef6; border-left:4px solid #f57c00;">Calculation status: idle</div>
+
+    <div class="layout">
+      <section class="panel" style="grid-column: 1 / -1;">
+        <div class="panel-header">
+          <strong>Input Parameters</strong>
+        </div>
+        <div class="panel-body">
+          <div class="grid-form">
+            <!-- 1. Soil Resistivity -->
+            <div class="field"><label for="soilResistivity">Soil resistivity, ρ (ohm-m)</label><input id="soilResistivity" type="number" value="" min="0" step="any"></div>
+            
+            <!-- 2. Grid Type Selection -->
+            <div class="field"><label for="gridType">Grid type</label>
+              <select id="gridType">
+                <option value="" selected>-- Select --</option>
+                <option value="uniform">Uniform</option>
+                <option value="non-uniform" disabled style="opacity:0.5;">Non-uniform (coming soon)</option>
+              </select>
+            </div>
+            
+            <!-- 3. Grid Length & Width (shown only for uniform) -->
+            <div class="field" id="gridLengthField"><label for="gridLength">Grid length, L (m)</label><input id="gridLength" type="number" value="" min="0" step="any"></div>
+            <div class="field" id="gridWidthField"><label for="gridWidth">Grid width, W (m)</label><input id="gridWidth" type="number" value="" min="0" step="any"></div>
+            
+            <!-- 4. Fault Current -->
+            <div class="field"><label for="faultCurrent">Fault current, I<sub>f</sub> (A)</label><input id="faultCurrent" type="number" value="" min="0" step="any"></div>
+            
+            <!-- 5. Clearing Time -->
+            <div class="field"><label for="clearingTime">Clearing time, t (s)</label><input id="clearingTime" type="number" value="" min="0.01" step="any"></div>
+            
+            <!-- 6. Remaining Fields -->
+            <!-- Ground rod count and spacing moved to Rod Selection section -->
+            <div class="field" style="display:flex;flex-direction:column;">
+              <div style="display:flex;gap:8px;align-items:center;">
+                <label for="surfaceMaterial" style="margin:0;">Surface material (typical)</label>
+                <label for="surfaceMoisture" style="margin:0 0 0 12px;font-size:0.9rem;color:var(--muted);">condition</label>
+                <select id="surfaceMoisture" style="margin-left:6px;">
+                  <option value="" selected>-- Select --</option>
+                  <option value="dry">Dry</option>
+                  <option value="wet">Wet</option>
+                </select>
+              </div>
+              <select id="surfaceMaterial" style="margin-top:8px;">
+                <option value="" selected>-- Select --</option>
+                <option value="custom" data-dry="" data-wet="">Custom</option>
+                <option value="crusher_granite" data-dry="140000000" data-wet="1300">Crusher run granite with fines — Dry:140×10⁶, Wet:1300 Ω·m</option>
+                <option value="crusher_granite_1_5" data-dry="4000" data-wet="1200">1½ in crusher run granite — Dry:4,000, Wet:1,200 Ω·m</option>
+                <option value="washed_granite_no4" data-dry="3000000" data-wet="5000">Washed granite No.4 — Dry:3.0×10⁶, Wet:5,000 Ω·m</option>
+                <option value="washed_granite_no3" data-dry="2800000" data-wet="10000">Washed granite No.3 — Dry:2.8×10⁶, Wet:10,000 Ω·m</option>
+                <option value="washed_limestone" data-dry="7000000" data-wet="2500">Washed limestone — Dry:7.0×10⁶, Wet:2,500 Ω·m</option>
+                <option value="granite_gravel" data-dry="2000000" data-wet="10000">Washed granite / gravel — Dry:2.0×10⁶, Wet:10,000 Ω·m</option>
+                <option value="pea_gravel" data-dry="40000000" data-wet="5000">Washed granite (pea gravel) — Dry:40×10⁶, Wet:5,000 Ω·m</option>
+                <option value="no57_granite" data-dry="190000000" data-wet="8000">No.57 washed granite — Dry:190×10⁶, Wet:8,000 Ω·m</option>
+                <option value="asphalt" data-dry="2000000" data-wet="10000">Asphalt — Dry:2.0×10⁶, Wet:10,000 Ω·m</option>
+                <option value="concrete" data-dry="1000000" data-wet="100">Concrete — Dry:1.0×10⁶, Wet:100 Ω·m</option>
+              </select>
+              <label for="surfaceResistivity" style="margin-top:8px;">Surface layer resistivity, ρs (Ω·m) — editable</label>
+              <input id="surfaceResistivity" type="number" value="" min="0" step="any">
+            </div>
+            <div class="field"><label for="surfaceThickness">Surface layer thickness, h<sub>s</sub> (m)</label><input id="surfaceThickness" type="number" value="" min="0" step="any"></div>
+            <div class="field"><label for="shockDuration">Shock duration used, t<sub>s</sub> (s)</label><input id="shockDuration" type="number" value="" min="0.0001" step="any"><div class="helper">Editable shock duration in seconds. If zero or empty, clearing time is used.</div></div>
+            <div class="field"><label for="gridDepth">Grid depth, h (m)</label><input id="gridDepth" type="number" value="" min="0" step="any"></div>
+            <div class="field"><label for="currentDivision">Current division factor, Sf</label><input id="currentDivision" type="number" value="" min="0" max="1" step="any"></div>
+            <div class="field"><label for="bodyWeight">Body weight, Mb (kg)</label>
+              <select id="bodyWeight">
+                <option value="" selected>-- Select --</option>
+                <option value="70">70 kg</option>
+                <option value="50">50 kg</option>
+              </select>
+            </div>
+            <div class="field"><label for="frequency">Frequency, f (Hz)</label>
+              <select id="frequency">
+                <option value="" selected>-- Select --</option>
+                <option value="50">50 Hz</option>
+                <option value="60">60 Hz</option>
+              </select>
+            </div>
+            <div class="field"><label for="xrRatio">X/R ratio (typical)</label><input id="xrRatio" type="number" value="" min="0.1" step="0.1"></div>
+          </div>
+
+          <!-- Calculate and Reset buttons removed; calculations run live from inputs -->
+
+          <!-- grid canvas moved to bottom of page -->
+
+          <div class="summary helper" style="margin-top:18px;">
+            The outputs below are engineering estimates intended to support early-stage IEEE Std 80 earthing design. The layout is organized so each result maps back to the step sequence in the block diagram.
+          </div>
+        </div>
+      </section>
+
+          
+
+      
+
+      <!-- Tolerable Voltages Section (Reflection factor, Cs, Step/Touch limits) -->
+      <section class="panel" style="grid-column: 1 / -1; margin-top:18px;">
+        <div class="panel-header">
+          <strong>Tolerable Step &amp; Touch Voltages</strong>
+        </div>
+        <div class="panel-body">
+          <div class="grid-form" style="margin-bottom:12px;">
+            <div class="field" style="grid-column: 1 / -1;"><div class="helper">Using the surface layer thickness and clearing time from the Input Parameters panel.</div></div>
+          </div>
+
+          <div class="results-grid">
+            <div class="result-card"><div class="label">Reflection factor, K</div><div class="value" id="reflectionFactor">-</div></div>
+            <div class="result-card"><div class="label">Surface derating factor, C<sub>s</sub></div><div class="value" id="surfaceDerating">-</div></div>
+            <div class="result-card"><div class="label" id="E_step_label">E_step</div><div class="value" id="E_step">-</div></div>
+            <div class="result-card"><div class="label" id="E_touch_label">E_touch</div><div class="value" id="E_touch">-</div></div>
+          </div>
+
+          <div class="summary helper" style="margin-top:12px;" id="tolerableSummary">
+            These values are calculated per IEEE-style expressions using the selected surface layer properties and shock duration.
+          </div>
+        </div>
+      </section>
+
+      <!-- Conductor Sizing Calculation Section -->
+      <section class="panel" style="grid-column: 1 / -1; margin-top:18px;">
+        <div class="panel-header">
+          <strong>Conductor Sizing Calculation</strong>
+        </div>
+        <div class="panel-body">
+          <div class="grid-form" style="margin-bottom:16px;">
+            <div class="field"><label for="conductorMaterial">Conductor material</label>
+              <select id="conductorMaterial">
+                <option value="" selected>-- Select --</option>
+                <option value="copper_hard">Copper, commercial hard-drawn</option>
+                <option value="copper_soft">Copper, annealed soft-drawn</option>
+                <option value="copper_clad_wire_40">Copper-clad steel wire (40% Cu)</option>
+                <option value="copper_clad_wire_30">Copper-clad steel wire (30% Cu)</option>
+                <option value="copper_clad_rod">Copper-clad steel rod (17% Cu)</option>
+                <option value="aluminum_clad_wire">Aluminum-clad steel wire</option>
+                <option value="steel_1020">Steel, 1020</option>
+                <option value="stainless_clad_rod">Stainless-clad steel rod</option>
+                <option value="zinc_coated_rod">Zinc-coated steel rod</option>
+                <option value="stainless_304">Stainless steel, 304</option>
+              </select>
+            </div>
+            <div class="field"><label for="ambientTemp">Ambient temperature, Ta (°C)</label><input id="ambientTemp" type="number" value="" min="-50" max="200" step="0.1"></div>
+          </div>
+          <div style="margin-bottom:16px;">
+            <div style="font-size:0.95rem; color:var(--muted); line-height:1.6;">
+              <strong>Formula:</strong> A = (I<sub>grid</sub> × √t) / k<br>
+              where A = conductor area (mm²), I<sub>grid</sub> = grid current (kA) used for sizing, t = clearing time (s), k = material constant (IEEE 80)
+            </div>
+          </div>
+          <div class="results-grid">
+            <div class="result-card"><div class="label">Material constant, k</div><div class="value" id="materialConstant">-</div></div>
+            <div class="result-card"><div class="label">Material Ko (0°C)</div><div class="value" id="materialKo">-</div></div>
+            <div class="result-card"><div class="label">Thermal capacity, TCAP</div><div class="value" id="materialTCAP">-</div></div>
+            <div class="result-card"><div class="label">Thermal coeff, α_r</div><div class="value" id="materialAlpha">-</div></div>
+            <div class="result-card"><div class="label">Resistivity, ρ_r</div><div class="value" id="materialRho">-</div></div>
+            <div class="result-card"><div class="label">Fusing temp, T_m</div><div class="value" id="materialTm">-</div></div>
+            <div class="result-card"><div class="label">Fault current (used)</div><div class="value" id="gridCurrentSizing">-</div></div>
+            <div class="result-card"><div class="label">Clearing time</div><div class="value" id="clearingTimeSizing">-</div></div>
+            <div class="result-card wide" style="background: linear-gradient(180deg, #e8f5e9 0%, #f1f8f6 100%); border: 1px solid #81c784;"><div class="label">Required conductor area</div><div class="value" id="conductorArea" style="color: #2e7d32; font-weight:900;">-</div></div>
+            <div class="result-card wide" style="background: linear-gradient(180deg, #e3f2fd 0%, #f3f8ff 100%); border: 1px solid #42a5f5;"><div class="label">Equivalent round conductor diameter</div><div class="value" id="conductorDiameter" style="color: #1565c0; font-weight:900;">-</div></div>
+          </div>
+          
+        </div>
+      </section>
+
+      <!-- Rod Selection Section -->
+      <section class="panel" style="grid-column: 1 / -1; margin-top:18px;">
+        <div class="panel-header">
+          <strong>Rod Selection</strong>
+        </div>
+        <div class="panel-body">
+          <div class="grid-form" style="margin-bottom:16px;">
+            <div class="field"><label for="rodMaterial">Rod material as per IEEE 80</label>
+              <select id="rodMaterial">
+                <option value="" selected>-- Select --</option>
+                <option value="copper_clad_rod">Copper-clad steel rod (17% Cu)</option>
+                <option value="stainless_clad_rod">Stainless-clad steel rod</option>
+                <option value="zinc_coated_rod">Zinc-coated steel rod</option>
+                <option value="stainless_304">Stainless steel, 304</option>
+                <option value="copper_hard">Copper, commercial hard-drawn</option>
+              </select>
+            </div>
+            <div class="field"><label for="rodLength">Length of ground rod, L<sub>r</sub> (m)</label><input id="rodLength" type="number" value="" min="0.1" step="any"></div>
+            <div class="field"><label for="rodRadius">Radius of rod, b (m)</label><input id="rodRadius" type="number" value="" min="0.0001" step="any"></div>
+            <div class="field"><label for="rodCount">Number of ground rods</label><input id="rodCount" type="number" value="" min="0" step="1"></div>
+            <div class="field"><label for="rodSpacing">Rod spacing (m) along perimeter</label><input id="rodSpacing" type="number" value="" min="0.1" step="any"></div>
+            <div class="field" style="justify-content:flex-end;">
+              <div class="helper">Select the rod material and enter the number of rods and spacing used around the grid perimeter.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Full-width grid panel placed at the bottom (spans both columns) -->
+      <section class="panel" style="grid-column: 1 / -1; margin-top:18px;">
+        <div class="panel-header">
+          <strong>Grid Layout</strong>
+        </div>
+        <div class="panel-body">
+          <div class="grid-form" style="margin-bottom:16px;">
+            <div class="field"><label for="layoutMode">Grid layout mode</label>
+              <select id="layoutMode">
+                <option value="" selected>-- Select --</option>
+                <option value="manual">Manual (specify counts)</option>
+                <option value="automatic" disabled style="opacity:0.6">Automatic (coming soon)</option>
+              </select>
+            </div>
+          </div>
+          <div class="field" id="manualCounts" style="display:block; padding: 0 20px;">
+            <label>Manual conductor counts</label>
+            <div style="display:flex;gap:10px;">
+              <input id="conductorsX" type="number" value="" min="2" step="1" style="flex:1;" aria-label="Number of conductors in X direction">
+              <input id="conductorsY" type="number" value="" min="2" step="1" style="flex:1;" aria-label="Number of conductors in Y direction">
+            </div>
+            <div class="helper" style="margin-top:6px;">Enter conductor counts across length (X) and width (Y) when manual mode is selected.</div>
+          </div>
+          <div class="legend" aria-hidden="false">
+            <div class="legend-item"><span class="swatch" style="background:#1976d2"></span> Conductors (grid)</div>
+            <div class="legend-item"><span class="swatch rod" style="background:#ff6b6b"></span> Ground rods</div>
+          </div>
+          <div class="layout-canvas" aria-hidden="false" aria-label="Conductor and rod layout">
+            <svg id="layoutSvg" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="layoutTitle layoutDesc">
+              <title id="layoutTitle">Conductor grid and ground rod arrangement</title>
+              <desc id="layoutDesc">Graphical representation of conductors (lines) and ground rods (dots) scaled to grid size.</desc>
+            </svg>
+          </div>
+          <div class="summary helper" style="margin-top:12px;" id="gridLayoutNote">
+            <strong>Note:</strong>
+            Total length of conductor: <span id="gridLengthNoteValue">0.00 m</span>.
+            Peripheral length of the grid: <span id="gridPeripheralLengthNoteValue">0.00 m</span>.
+            Cumulative length of rods: <span id="gridRodLengthNoteValue">0.00 m</span>.
+            Average spacing between conductors: <span id="gridAverageSpacingNoteValue">0.00 m</span>.
+            Spacing across length (Sx): <span id="gridSpacingNoteValue">0.00 m</span>.
+            Spacing across width (Sy): <span id="gridSpacingYNoteValue">0.00 m</span>.
+            Maximum distance between any two points: <span id="gridMaxDistanceNoteValue">0.00 m</span>.
+          </div>
+          <div style="margin-top:12px; display:flex; gap:12px;">
+            <button class="btn btn-primary" id="calculateBtnBottom" type="button">Calculate</button>
+            <button class="btn btn-secondary" id="resetBtnBottom" type="button">Reset</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Grid Summary: resistance, max current, calculated touch/step voltages (moved to last) -->
+      <section class="panel" style="grid-column: 1 / -1; margin-top:18px;">
+        <div class="panel-header">
+          <strong>Grid Summary</strong>
+        </div>
+        <div class="panel-body">
+          <div class="results-grid">
+            <div class="result-card"><div class="label">Mesh voltage, E<sub>m</sub></div><div class="value" id="meshVoltagePanel">0.00 V</div></div>
+            <div class="result-card"><div class="label">Step voltage, E<sub>s</sub></div><div class="value" id="stepVoltagePanel">0.00 V</div></div>
+            <div class="result-card"><div class="label">Estimated grid resistance, R<sub>g</sub></div><div class="value" id="gridResistancePanel">0.0000 ohm</div></div>
+            <div class="result-card"><div class="label">Maximum grid current, I<sub>G</sub> (entering grid)</div><div class="value" id="maxGridCurrentPanel">0.00 A</div></div>
+            <div class="result-card"><div class="label">Ground potential rise, GPR</div><div class="value" id="gridGPRPanel">0.00 V</div></div>
+            <!-- Removed GPR, calculated touch and step from Grid Summary per user request -->
+          </div>
+          <div id="gridSummaryNote" class="summary helper" style="margin-top:12px;">These are approximate values based on the simplified grid model used here: R<sub>g</sub> = ρ[1/L<sub>T</sub> + 1/√(20A)·(1 + 1/(1 + h√(20/A)))]. Grid current uses I<sub>G</sub> = S<sub>f</sub> · D<sub>f</sub> · I<sub>f</sub>, and GPR = I<sub>G</sub>·R<sub>g</sub>.</div>
+        </div>
+      </section>
+
+
+
+  <script>
+    var gridSummaryEnabled = false;
+    function clearGridSummary() {
+      var ids = ['meshVoltagePanel','stepVoltagePanel','gridResistancePanel','maxGridCurrentPanel','gridGPRPanel','dfValue','taValue'];
+      ids.forEach(function(id){
+        var el = document.getElementById(id);
+        if (el) el.textContent = '-';
+        if (el && el.parentElement) { el.parentElement.classList.remove('pass'); el.parentElement.classList.remove('warn'); }
+      });
+    }
+    function numberValue(id, fallback) {
+      var element = document.getElementById(id);
+      if (!element) {
+        console.warn('numberValue: element not found', id);
+        return fallback;
+      }
+      var raw = element.value;
+      var value = parseFloat(raw);
+      if (!Number.isFinite(value)) {
+        // warn once in console to help debug NaN sources
+        // but avoid spamming: include id and raw value
+        console.warn('numberValue: non-finite value for', id, 'raw="' + raw + '"; using fallback=', fallback);
+        return fallback;
+      }
+      return value;
+    }
+
+      function conductorConstant(material) {
+          // Extended material constants (from IEEE table provided)
+          // Values: Ko (at 0°C), alpha (1/°C), Tm (fusing temp °C), rho (μΩ·cm), TCAP [J/(cm^3·°C)], k (legacy simple constant)
+          var constants = {
+            copper_hard: { label: 'Copper, commercial hard-drawn', k: 115, Ko: 242, alpha: 0.00381, Tm: 1084, rho: 1.78, TCAP: 3.4 },
+            copper_soft: { label: 'Copper, annealed soft-drawn', k: 103, Ko: 234, alpha: 0.00393, Tm: 1083, rho: 1.72, TCAP: 3.4 },
+            copper_clad_wire_40: { label: 'Copper-clad steel wire (40% Cu)', k: 90, Ko: 245, alpha: 0.00378, Tm: 1084, rho: 4.40, TCAP: 3.8 },
+            copper_clad_wire_30: { label: 'Copper-clad steel wire (30% Cu)', k: 85, Ko: 245, alpha: 0.00378, Tm: 1084, rho: 5.86, TCAP: 3.8 },
+            copper_clad_rod: { label: 'Copper-clad steel rod (17% Cu)', k: 80, Ko: 245, alpha: 0.00378, Tm: 1084, rho: 10.10, TCAP: 3.8 },
+            aluminum_clad_wire: { label: 'Aluminum-clad steel wire', k: 76, Ko: 258, alpha: 0.00360, Tm: 657, rho: 8.48, TCAP: 3.561 },
+            steel_1020: { label: 'Steel, 1020', k: 52, Ko: 245, alpha: 0.00377, Tm: 1510, rho: 15.90, TCAP: 3.8 },
+            stainless_clad_rod: { label: 'Stainless-clad steel rod', k: 30, Ko: 245, alpha: 0.00377, Tm: 1400, rho: 17.50, TCAP: 4.4 },
+            zinc_coated_rod: { label: 'Zinc-coated steel rod', k: 25, Ko: 293, alpha: 0.00320, Tm: 419, rho: 20.10, TCAP: 3.9 },
+            stainless_304: { label: 'Stainless steel, 304', k: 10, Ko: 749, alpha: 0.00130, Tm: 1400, rho: 72.00, TCAP: 4.0 }
+          };
+          return constants[material] || constants.copper_hard;
+      }
+
+    function formatNumber(value, digits) {
+      return value.toLocaleString(undefined, {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits
+      });
+    }
+
+    function calculateEarthing() {
+      // Ensure grid summary is shown when calculation runs (avoid guarded hidden state)
+      gridSummaryEnabled = true;
+      var gpr = 0;
+      var statusEl = document.getElementById('calcStatus');
+      try {
+      var faultCurrent = numberValue('faultCurrent', 0);
+      var clearingTime = Math.max(numberValue('clearingTime', 0.5), 0.01);
+      var conductorMaterialId = document.getElementById('conductorMaterial').value;
+      var conductorMaterial = conductorConstant(conductorMaterialId);
+      var soilResistivity = numberValue('soilResistivity', 100);
+      var surfaceResistivity = numberValue('surfaceResistivity', 3000);
+      var gridLength = Math.max(numberValue('gridLength', 1), 0.01);
+      var gridWidth = Math.max(numberValue('gridWidth', 1), 0.01);
+      var gridDepth = Math.max(numberValue('gridDepth', 0.6), 0.01);
+      var currentDivision = Math.min(Math.max(numberValue('currentDivision', 0.6), 0), 1);
+      var bodyWeight = Math.max(numberValue('bodyWeight', 70), 1);
+
+      var gridArea = gridLength * gridWidth;
+      var perimeter = 2 * (gridLength + gridWidth);
+      // determine conductor counts and spacing depending on layout mode
+      var layoutMode = (document.getElementById('layoutMode') || {}).value || 'manual';
+      var divX, divY, actualSpacingX, actualSpacingY;
+      if (layoutMode === 'manual') {
+        // User input is number of conductors; convert to intervals (divX = conductors - 1)
+        var numConductorsX = Math.max(2, Math.round(numberValue('conductorsX', 2)));
+        var numConductorsY = Math.max(2, Math.round(numberValue('conductorsY', 2)));
+        divX = Math.max(1, numConductorsX - 1);
+        divY = Math.max(1, numConductorsY - 1);
+        actualSpacingX = gridLength / divX;
+        actualSpacingY = gridWidth / divY;
+      } else {
+        var defaultSpacing = 3; // fallback spacing for automatic mode (disabled in UI)
+        divX = Math.max(1, Math.round(gridLength / defaultSpacing));
+        divY = Math.max(1, Math.round(gridWidth / defaultSpacing));
+        actualSpacingX = gridLength / divX;
+        actualSpacingY = gridWidth / divY;
+      }
+      var equivalentLength = perimeter + (gridArea / ((actualSpacingX + actualSpacingY) / 2));
+      var meshCountApprox = divX * divY;
+      var meshDensity = meshCountApprox / gridArea;
+      var surfaceFactor = 1 + Math.min(surfaceResistivity / 5000, 1.4) * 0.25;
+      // For conductor sizing, use the fault current per request (I_f), not the divided grid current
+      var sizingCurrent = faultCurrent;
+      // convert to kA for the sizing formula per user request
+      var sizingCurrent_kA = sizingCurrent / 1000;
+      // Detailed IEEE conductor sizing formula (see provided image/table)
+      // A (mm^2) = I * sqrt( (TCAP * 1e-4) / (t_c * alpha_r * rho_r) ) / ln((Ko + Tm) / (Ko + Ta))
+      var Ta = numberValue('ambientTemp', 20); // ambient starting temperature (°C) from UI
+      var Ko = conductorMaterial.Ko;
+      var alpha_r = conductorMaterial.alpha;
+      var Tm = conductorMaterial.Tm;
+      var rho_r = conductorMaterial.rho; // μΩ-cm
+      var TCAP = conductorMaterial.TCAP; // J/(cm^3·°C)
+      var conductorArea = 0;
+      var conductorDiameter = 0;
+      try {
+        var X = (TCAP * 1e-4) / (clearingTime * alpha_r * rho_r);
+        var sqrtX = Math.sqrt(Math.max(0, X));
+        var lnTerm = Math.log((Ko + Tm) / (Ko + Ta));
+        if (lnTerm > 0 && sqrtX > 0 && Number.isFinite(sizingCurrent_kA)) {
+          conductorArea = sizingCurrent_kA / (sqrtX * lnTerm);
+        } else {
+          // fallback to the legacy simple k-based estimate
+          conductorArea = (sizingCurrent_kA * Math.sqrt(clearingTime)) / conductorMaterial.k;
+        }
+      } catch (e) {
+        // avoid referencing variables that may not yet be defined; fall back to k-based estimate
+        conductorArea = (sizingCurrent_kA * Math.sqrt(clearingTime)) / conductorMaterial.k;
+      }
+      // Defensive: ensure conductorArea is a reasonable positive finite number
+      if (!Number.isFinite(conductorArea) || conductorArea <= 0) {
+        var fallback = (sizingCurrent_kA * Math.sqrt(clearingTime)) / conductorMaterial.k;
+        conductorArea = Number.isFinite(fallback) && fallback > 0 ? fallback : 0;
+      }
+      conductorDiameter = Math.sqrt(Math.max(0, (4 * conductorArea) / Math.PI));
+      // If result still zero, reveal diagnostic details in the visible debug panel
+      
+      var gridResistance = (soilResistivity / (4 * Math.sqrt(gridArea))) * (1 + (1 / (1 + 10 * gridDepth)));
+      var allowableTouch = (116 * surfaceFactor / Math.sqrt(clearingTime)) * Math.sqrt(bodyWeight / 70);
+      var allowableStep = (174 * surfaceFactor / Math.sqrt(clearingTime)) * Math.sqrt(bodyWeight / 70);
+
+      // --- Tolerable voltages per IEEE-style expressions (reflection & surface derating) ---
+      var hs = Math.max(numberValue('surfaceThickness', 0.05), 0);
+      var rho_s = surfaceResistivity;
+      var rho = soilResistivity;
+      var reflectionK = 0;
+      var Cs = 1;
+      // If there is no surface layer (hs == 0) or surface resistivity is zero/empty,
+      // treat as no surface layer: Cs = 1 and rho_s = rho (surface resistivity equals soil resistivity)
+      if (hs === 0 || !Number.isFinite(rho_s) || rho_s === 0) {
+        Cs = 1;
+        rho_s = rho;
+        reflectionK = 0;
+      } else {
+        if ((rho + rho_s) !== 0) reflectionK = (rho - rho_s) / (rho + rho_s);
+        Cs = 1 - (0.09 * (1 - (rho / rho_s))) / (2 * hs + 0.09);
+      }
+      if (!Number.isFinite(Cs)) Cs = 1;
+      // ensure reasonable numeric stability
+      if (!Number.isFinite(Cs)) Cs = 1;
+
+      // allow an editable shock duration that overrides clearing time when provided
+      var shockInputVal = numberValue('shockDuration', NaN);
+      var ts = (Number.isFinite(shockInputVal) && shockInputVal > 0) ? shockInputVal : Math.max(clearingTime, 0.0001);
+      // compute DC offset time constant Ta from X/R ratio and frequency
+      var freq = numberValue('frequency', 50);
+      var xr = Math.max(numberValue('xrRatio', 10), 0.0001);
+      var omega = 2 * Math.PI * Math.max(freq, 0.0001);
+      var Ta = xr / omega; // Ta = (X/R) / omega
+      // decrement factor Df per supplied formula: Df = sqrt(1 + (Ta/tf) * (1 - e^{-2 tf / Ta}))
+      var Df = 1;
+      if (Ta > 0 && ts > 0) {
+        var expTerm = Math.exp(-2 * ts / Ta);
+        Df = Math.sqrt(1 + (Ta / ts) * (1 - expTerm));
+      }
+      // compute grid current using Sf (currentDivision) and Df
+      var gridCurrent = currentDivision * Df * faultCurrent;
+      var baseStep = Math.max(1000 + 6 * Cs * rho_s, 1);
+      var baseTouch = Math.max(1000 + 1.5 * Cs * rho_s, 1);
+
+      var selectedWeight = (bodyWeight === 50) ? 50 : 70;
+      var E_step_selected = 0;
+      var E_touch_selected = 0;
+      if (selectedWeight === 50) {
+        E_step_selected = (baseStep * 0.116) / Math.sqrt(ts);
+        E_touch_selected = (baseTouch * 0.116) / Math.sqrt(ts);
+      } else {
+        E_step_selected = (baseStep * 0.157) / Math.sqrt(ts);
+        E_touch_selected = (baseTouch * 0.157) / Math.sqrt(ts);
+      }
+
+      // update tolerable voltages panel displays
+      // update Ta and Df displays in mini-table
+      var dfDisp = document.getElementById('dfValue'); if (dfDisp) dfDisp.textContent = Df.toFixed(4);
+      var taDisp = document.getElementById('taValue'); if (taDisp) taDisp.textContent = Ta.toFixed(4) + ' s';
+      var gridNote = document.getElementById('gridSummaryNote');
+      if (gridNote) {
+        gridNote.innerHTML = 'These are approximate values based on the simplified grid model used here: R<sub>g</sub> = ρ[1/L<sub>T</sub> + 1/√(20A)·(1 + 1/(1 + h√(20/A)))]. Grid current uses I<sub>G</sub> = S<sub>f</sub> · D<sub>f</sub> · I<sub>f</sub> (calculated D<sub>f</sub> = ' + Df.toFixed(4) + '). GPR = I<sub>G</sub>·R<sub>g</sub>.';
+      }
+      var surfResDisp = document.getElementById('surfaceResDisplay'); if (surfResDisp) surfResDisp.textContent = rho_s.toFixed(2) + ' Ω·m';
+      var soilResDisp = document.getElementById('soilResDisplay'); if (soilResDisp) soilResDisp.textContent = rho.toFixed(2) + ' Ω·m';
+      var refEl = document.getElementById('reflectionFactor'); if (refEl) refEl.textContent = reflectionK.toFixed(4);
+      var csEl = document.getElementById('surfaceDerating'); if (csEl) csEl.textContent = Cs.toFixed(4);
+      var esEl = document.getElementById('E_step'); if (esEl) esEl.textContent = E_step_selected.toFixed(2) + ' V';
+      var etEl = document.getElementById('E_touch'); if (etEl) etEl.textContent = E_touch_selected.toFixed(2) + ' V';
+      var esLabel = document.getElementById('E_step_label'); if (esLabel) esLabel.textContent = 'E_step (' + selectedWeight + ' kg)';
+      var etLabel = document.getElementById('E_touch_label'); if (etLabel) etLabel.textContent = 'E_touch (' + selectedWeight + ' kg)';
+
+      // Top-level result cards (grid area/current) were removed from the Results section.
+      document.getElementById('conductorArea').textContent = conductorArea.toFixed(2) + ' mm²';
+      document.getElementById('conductorDiameter').textContent = conductorDiameter.toFixed(2) + ' mm';
+      var rodLength = Math.max(parseFloat(document.getElementById('rodLength').value) || 0, 0);
+      var rodCount = Math.max(parseInt(document.getElementById('rodCount').value) || 0, 0);
+      var rodSpacing = Math.max(parseFloat(document.getElementById('rodSpacing').value) || 0, 0);
+      var rodLengthTotal = rodLength * rodCount;
+      var rodLengthNote = document.getElementById('gridRodLengthNoteValue'); if (rodLengthNote) rodLengthNote.textContent = formatNumber(rodLengthTotal, 2) + ' m';
+      var conductorCountX = (layoutMode === 'manual') ? Math.max(2, Math.round(numberValue('conductorsX', 2))) : (divX + 1);
+      var conductorCountY = (layoutMode === 'manual') ? Math.max(2, Math.round(numberValue('conductorsY', 2))) : (divY + 1);
+      var totalConductorLength = (gridLength * conductorCountY) + (gridWidth * conductorCountX);
+      var maxGridDistance = Math.sqrt((gridLength * gridLength) + (gridWidth * gridWidth));
+      var averageSpacing = (actualSpacingX + actualSpacingY) / 2;
+      var peripheralLength = 2 * (gridLength + gridWidth);
+      var meshSpacing = Math.max(averageSpacing, 0.000001);
+      var meshDepth = Math.max(gridDepth, 0.000001);
+      var conductorDiameterM = Math.max(conductorDiameter / 1000, 0.000001);
+      var meshParallelCount = Math.max(1, meshCountApprox);
+      var khFactor = Math.sqrt(1 + (meshDepth / 1));
+      var kiFactor = (rodCount > 0) ? 1 : (1 / Math.pow(2 * meshParallelCount, 1 / meshParallelCount));
+      var effectiveBuriedLength = totalConductorLength;
+      if (rodCount > 0) {
+        effectiveBuriedLength = totalConductorLength + (1.55 + 1.22 * (rodLength / Math.max(maxGridDistance, 0.000001))) * rodLengthTotal;
+      }
+      var kmTerm1 = Math.log((meshSpacing * meshSpacing) / (16 * meshDepth * conductorDiameterM));
+      var kmTerm2 = Math.pow(meshSpacing + 2 * meshDepth, 2) / (8 * meshSpacing * conductorDiameterM);
+      var kmTerm3 = meshDepth / (4 * conductorDiameterM);
+      var kmTerm4 = (kiFactor / khFactor) * Math.log(8 / (Math.PI * (2 * meshParallelCount - 1)));
+      var meshFactorKm = (1 / (2 * Math.PI)) * (kmTerm1 + kmTerm2 - kmTerm3 + kmTerm4);
+      var meshVoltage = Math.max(0, (soilResistivity * meshFactorKm * kiFactor * gridCurrent) / Math.max(effectiveBuriedLength, 0.000001));
+      var stepBuriedLength = (0.75 * totalConductorLength) + (0.85 * rodLengthTotal);
+      var stepSpacing = Math.max(actualSpacingX, actualSpacingY, 1);
+      var stepTerm1 = 1 / Math.max(2 * meshDepth, 0.000001);
+      var stepTerm2 = 1 / Math.max(stepSpacing + meshDepth, 0.000001);
+      var stepTerm3 = (1 / Math.max(stepSpacing, 0.000001)) * (1 - Math.pow(0.5, Math.max(meshParallelCount - 2, 0)));
+      var stepFactorKs = (1 / Math.PI) * (stepTerm1 + stepTerm2 + stepTerm3);
+      var stepVoltage = Math.max(0, (soilResistivity * stepFactorKs * kiFactor * gridCurrent) / Math.max(stepBuriedLength, 0.000001));
+      // Grid resistance panel is updated in the Grid Summary; top result card removed.
+      // show main GPR display only when Calculate was pressed; otherwise keep placeholder
+      // The top-level GPR card was removed; no DOM update needed here.
+      // update new Grid Summary panel only when explicitly requested by user (press Calculate)
+      if (gridSummaryEnabled) {
+        var meshVoltageEl = document.getElementById('meshVoltagePanel'); if (meshVoltageEl) meshVoltageEl.textContent = formatNumber(meshVoltage, 2) + ' V';
+        var stepVoltageEl = document.getElementById('stepVoltagePanel'); if (stepVoltageEl) stepVoltageEl.textContent = formatNumber(stepVoltage, 2) + ' V';
+        var gridRgEl = document.getElementById('gridResistancePanel'); if (gridRgEl) gridRgEl.textContent = gridResistance.toFixed(4) + ' ohm';
+        var maxGridCurrentEl = document.getElementById('maxGridCurrentPanel'); if (maxGridCurrentEl) maxGridCurrentEl.textContent = formatNumber(gridCurrent,2) + ' A';
+        // compute and display GPR = I_G * R_g (volts)
+        gpr = gridCurrent * gridResistance;
+        var gprEl = document.getElementById('gridGPRPanel'); if (gprEl) gprEl.textContent = formatNumber(gpr,2) + ' V';
+        if (window && window.console) console.debug('GPR debug', { gridCurrent: gridCurrent, gridResistance: gridResistance, gpr: gpr, gridSummaryEnabled: gridSummaryEnabled });
+      } else {
+        clearGridSummary();
+      }
+
+      // color coding: green (pass) if GPR less than tolerable limits, else red (warn)
+      var gprVal = gpr;
+      var okTouch = Number.isFinite(allowableTouch) && (gprVal <= allowableTouch);
+      var okStep = Number.isFinite(allowableStep) && (gprVal <= allowableStep);
+      var okGPR = okTouch && okStep;
+      // Note: GPR/touch/step cards removed from Grid Summary; color coding left on safetyStatus only
+      // touch/step result cards removed from Results section; values remain available in tolerable panel
+      document.getElementById('equivalentLength').textContent = formatNumber(equivalentLength, 2) + ' m';
+      document.getElementById('meshDensity').textContent = meshDensity.toFixed(4);
+      document.getElementById('surfaceFactor').textContent = surfaceFactor.toFixed(3);
+      var gridLengthNote = document.getElementById('gridLengthNoteValue'); if (gridLengthNote) gridLengthNote.textContent = formatNumber(totalConductorLength, 2) + ' m';
+      var gridPeripheralLengthNote = document.getElementById('gridPeripheralLengthNoteValue'); if (gridPeripheralLengthNote) gridPeripheralLengthNote.textContent = formatNumber(peripheralLength, 2) + ' m';
+      var gridSpacingXNote = document.getElementById('gridSpacingNoteValue'); if (gridSpacingXNote) gridSpacingXNote.textContent = formatNumber(actualSpacingX, 2) + ' m';
+      var gridSpacingYNote = document.getElementById('gridSpacingYNoteValue'); if (gridSpacingYNote) gridSpacingYNote.textContent = formatNumber(actualSpacingY, 2) + ' m';
+      var gridAverageSpacingNote = document.getElementById('gridAverageSpacingNoteValue'); if (gridAverageSpacingNote) gridAverageSpacingNote.textContent = formatNumber(averageSpacing, 2) + ' m';
+      var gridMaxDistanceNote = document.getElementById('gridMaxDistanceNoteValue'); if (gridMaxDistanceNote) gridMaxDistanceNote.textContent = formatNumber(maxGridDistance, 2) + ' m';
+      
+      // Conductor sizing section updates
+      document.getElementById('materialConstant').textContent = conductorMaterial.k;
+      document.getElementById('materialKo').textContent = Ko + ' °C';
+      document.getElementById('materialTCAP').textContent = TCAP + ' J/(cm³·°C)';
+      document.getElementById('materialAlpha').textContent = alpha_r + ' 1/°C';
+      document.getElementById('materialRho').textContent = rho_r + ' μΩ·cm';
+      document.getElementById('materialTm').textContent = Tm + ' °C';
+      // show fault current used for conductor sizing in kA
+      var sizingCurrent_kA = sizingCurrent / 1000;
+      document.getElementById('gridCurrentSizing').textContent = formatNumber(sizingCurrent_kA, 3) + ' kA';
+      document.getElementById('clearingTimeSizing').textContent = clearingTime.toFixed(3) + ' s';
+
+      var safetyStatus = document.getElementById('safetyStatus');
+      var resultSummary = document.getElementById('resultSummary');
+      var touchMarginValue = document.getElementById('touchMargin');
+      var stepMarginValue = document.getElementById('stepMargin');
+      var touchMargin = allowableTouch - gpr;
+      var stepMargin = allowableStep - gpr;
+      var statusText = (touchMargin >= 0 && stepMargin >= 0) ? 'Preliminary pass' : 'Needs redesign';
+
+      safetyStatus.textContent = statusText;
+      safetyStatus.parentElement.classList.toggle('pass', statusText === 'Preliminary pass');
+      safetyStatus.parentElement.classList.toggle('warn', statusText !== 'Preliminary pass');
+      touchMarginValue.textContent = touchMargin.toFixed(2) + ' V';
+      stepMarginValue.textContent = stepMargin.toFixed(2) + ' V';
+
+      resultSummary.textContent = 'Calculation complete. Review the available panels for details.';
+
+      renderLayout(gridLength, gridWidth, 0, rodCount, divX, divY);
+      // do not show inline debug panels or auto-update the status timestamp
+      return;
+      } catch (err) {
+        // Log the error for debugging but do NOT display it in the UI.
+        // This prevents visible 'Calculation error' banners from appearing.
+        try { console.error('calculateEarthing error', err); } catch (e) {}
+        return;
+      }
+    }
+
+    // Surface material mapping handler: when a typical material or moisture is selected, pick dry/wet value
+    function handleSurfaceMaterialChange() {
+      var sel = document.getElementById('surfaceMaterial');
+      var inp = document.getElementById('surfaceResistivity');
+      var moisture = (document.getElementById('surfaceMoisture') || {}).value || 'dry';
+      if (!sel || !inp) return calculateEarthing();
+      var opt = sel.options[sel.selectedIndex];
+      if (!opt) return calculateEarthing();
+      // Blank or custom stays editable; specific materials populate the field.
+      if (!opt.value || opt.value === 'custom') {
+        inp.disabled = false;
+        calculateEarthing();
+        return;
+      }
+      // otherwise pick dry/wet dataset value and disable editing
+      var dataKey = (moisture === 'wet') ? 'wet' : 'dry';
+      var datasetVal = opt.dataset ? opt.dataset[dataKey] : null;
+      if (datasetVal && datasetVal !== '') {
+        var v = parseFloat(datasetVal);
+        if (Number.isFinite(v)) inp.value = v;
+      }
+      inp.disabled = true;
+      calculateEarthing();
+    }
+
+    function renderLayout(L, W, spacing, rodCount, overrideDivX, overrideDivY) {
+      var svg = document.getElementById('layoutSvg');
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      var viewW = 800, viewH = 600; // svg viewbox size
+      var padding = 28;
+      var scaleX = (viewW - padding*2) / Math.max(0.001, Number(L));
+      var scaleY = (viewH - padding*2) / Math.max(0.001, Number(W));
+      var scale = Math.min(scaleX, scaleY);
+      var gridPxW = L * scale;
+      var gridPxH = W * scale;
+      var originX = (viewW - gridPxW) / 2;
+      var originY = (viewH - gridPxH) / 2;
+
+      // Debug overlay to help identify why grid may not render
+      try { console.debug('renderLayout', {L: L, W: W, spacing: spacing, rodCount: rodCount, overrideDivX: overrideDivX, overrideDivY: overrideDivY, scaleX: scaleX, scaleY: scaleY, scale: scale, gridPxW: gridPxW, gridPxH: gridPxH, originX: originX, originY: originY}); } catch(e){}
+
+      function ns(tag) { return document.createElementNS('http://www.w3.org/2000/svg', tag); }
+
+      // border
+      var rect = ns('rect');
+      rect.setAttribute('x', originX); rect.setAttribute('y', originY);
+      rect.setAttribute('width', gridPxW); rect.setAttribute('height', gridPxH);
+      rect.setAttribute('fill', 'none'); rect.setAttribute('stroke', '#cfe6fb'); rect.setAttribute('stroke-width', '2');
+      svg.appendChild(rect);
+
+      // Simplified dimension placement: always draw length inside the top edge of the grid so it's visible
+      var topY = originY + 14;
+      var dimLineTop = ns('line');
+      dimLineTop.setAttribute('x1', originX); dimLineTop.setAttribute('y1', topY);
+      dimLineTop.setAttribute('x2', originX + gridPxW); dimLineTop.setAttribute('y2', topY);
+      dimLineTop.setAttribute('stroke', '#0f172a'); dimLineTop.setAttribute('stroke-width', '1'); dimLineTop.setAttribute('opacity','0.45');
+      svg.appendChild(dimLineTop);
+
+      var tickA = ns('line'); tickA.setAttribute('x1', originX); tickA.setAttribute('y1', topY - 4); tickA.setAttribute('x2', originX); tickA.setAttribute('y2', topY + 4); tickA.setAttribute('stroke','#0f172a'); tickA.setAttribute('stroke-width','1'); svg.appendChild(tickA);
+      var tickB = ns('line'); tickB.setAttribute('x1', originX + gridPxW); tickB.setAttribute('y1', topY - 4); tickB.setAttribute('x2', originX + gridPxW); tickB.setAttribute('y2', topY + 4); tickB.setAttribute('stroke','#0f172a'); tickB.setAttribute('stroke-width','1'); svg.appendChild(tickB);
+
+      // draw length label with a white background for readability
+      var tTop = ns('text');
+      tTop.setAttribute('x', originX + gridPxW/2);
+      tTop.setAttribute('y', topY + 2);
+      tTop.setAttribute('fill','#0f172a');
+      tTop.setAttribute('font-size','12');
+      tTop.setAttribute('text-anchor','middle');
+      tTop.textContent = formatNumber(L,2) + ' m';
+      svg.appendChild(tTop);
+      // background behind text to avoid overlap with grid lines
+      try {
+        var bbox = tTop.getBBox();
+        var pad = 6;
+        var bg = ns('rect');
+        bg.setAttribute('x', bbox.x - pad/2);
+        bg.setAttribute('y', bbox.y - pad/2);
+        bg.setAttribute('width', bbox.width + pad);
+        bg.setAttribute('height', bbox.height + pad);
+        bg.setAttribute('fill', '#ffffff');
+        bg.setAttribute('stroke', 'none');
+        bg.setAttribute('rx', 4);
+        svg.insertBefore(bg, tTop);
+      } catch (e) {
+        // getBBox may fail in some environments before added to DOM; ignore silently
+      }
+
+      // Left dimension: attempt to place to left, otherwise inside near left edge
+      var leftX = (originX >= 28) ? originX - 18 : originX + 14;
+      var dimLineLeft = ns('line'); dimLineLeft.setAttribute('x1', leftX); dimLineLeft.setAttribute('y1', originY); dimLineLeft.setAttribute('x2', leftX); dimLineLeft.setAttribute('y2', originY + gridPxH); dimLineLeft.setAttribute('stroke','#0f172a'); dimLineLeft.setAttribute('stroke-width','1'); dimLineLeft.setAttribute('opacity','0.45'); svg.appendChild(dimLineLeft);
+      var tickC = ns('line'); tickC.setAttribute('x1', leftX - 4); tickC.setAttribute('y1', originY); tickC.setAttribute('x2', leftX + 4); tickC.setAttribute('y2', originY); tickC.setAttribute('stroke','#0f172a'); tickC.setAttribute('stroke-width','1'); svg.appendChild(tickC);
+      var tickD = ns('line'); tickD.setAttribute('x1', leftX - 4); tickD.setAttribute('y1', originY + gridPxH); tickD.setAttribute('x2', leftX + 4); tickD.setAttribute('y2', originY + gridPxH); tickD.setAttribute('stroke','#0f172a'); tickD.setAttribute('stroke-width','1'); svg.appendChild(tickD);
+      var tLeft = ns('text'); var lx = leftX; var ly = originY + gridPxH/2; tLeft.setAttribute('x', lx); tLeft.setAttribute('y', ly); tLeft.setAttribute('fill','#0f172a'); tLeft.setAttribute('font-size','12'); tLeft.setAttribute('text-anchor','middle'); tLeft.setAttribute('transform','rotate(-90 '+lx+' '+ly+')'); tLeft.textContent = formatNumber(W,2) + ' m'; svg.appendChild(tLeft);
+
+      // conductors: vertical and horizontal lines at spacing
+      var divX = 1, divY = 1, spacingX = L, spacingY = W;
+      if (spacing > 0 || (Number.isFinite(overrideDivX) && Number.isFinite(overrideDivY))) {
+        divX = Number.isFinite(overrideDivX) ? Math.max(1, Math.floor(overrideDivX)) : Math.max(1, Math.round(L / spacing));
+        divY = Number.isFinite(overrideDivY) ? Math.max(1, Math.floor(overrideDivY)) : Math.max(1, Math.round(W / spacing));
+        spacingX = L / divX;
+        spacingY = W / divY;
+        // if scale is Infinity or zero, render a visible error text
+        if (!Number.isFinite(scale) || scale <= 0) {
+          var errT = ns('text'); errT.setAttribute('x', viewW/2); errT.setAttribute('y', viewH/2); errT.setAttribute('fill','#d32f2f'); errT.setAttribute('font-size','14'); errT.setAttribute('text-anchor','middle'); errT.textContent = 'Invalid grid size — check L & W inputs'; svg.appendChild(errT); return; }
+        for (var i=0;i<=divX;i++) {
+          var x = originX + i * spacingX * scale;
+          var line = ns('line');
+          line.setAttribute('x1', x); line.setAttribute('y1', originY);
+          line.setAttribute('x2', x); line.setAttribute('y2', originY + gridPxH);
+          line.setAttribute('stroke', '#1976d2'); line.setAttribute('stroke-width', '1'); line.setAttribute('opacity','0.6');
+          svg.appendChild(line);
+        }
+        for (var j=0;j<=divY;j++) {
+          var y = originY + j * spacingY * scale;
+          var lineh = ns('line');
+          lineh.setAttribute('x1', originX); lineh.setAttribute('y1', y);
+          lineh.setAttribute('x2', originX + gridPxW); lineh.setAttribute('y2', y);
+          lineh.setAttribute('stroke', '#1976d2'); lineh.setAttribute('stroke-width', '1'); lineh.setAttribute('opacity','0.6');
+          svg.appendChild(lineh);
+        }
+        // spacing annotation between first two conductors (if at least two conductors)
+        if (divX >= 1) {
+          var sx1 = originX + 0 * spacingX * scale;
+          var sx2 = originX + 1 * spacingX * scale;
+          var dimS = ns('line');
+          dimS.setAttribute('x1', sx1); dimS.setAttribute('y1', originY + gridPxH + 12);
+          dimS.setAttribute('x2', sx2); dimS.setAttribute('y2', originY + gridPxH + 12);
+          dimS.setAttribute('stroke','#0f172a'); dimS.setAttribute('stroke-width','1'); dimS.setAttribute('opacity','0.45'); svg.appendChild(dimS);
+          var tickS1 = ns('line'); tickS1.setAttribute('x1', sx1); tickS1.setAttribute('y1', originY + gridPxH + 8); tickS1.setAttribute('x2', sx1); tickS1.setAttribute('y2', originY + gridPxH + 16); tickS1.setAttribute('stroke','#0f172a'); tickS1.setAttribute('stroke-width','1'); svg.appendChild(tickS1);
+          var tickS2 = ns('line'); tickS2.setAttribute('x1', sx2); tickS2.setAttribute('y1', originY + gridPxH + 8); tickS2.setAttribute('x2', sx2); tickS2.setAttribute('y2', originY + gridPxH + 16); tickS2.setAttribute('stroke','#0f172a'); tickS2.setAttribute('stroke-width','1'); svg.appendChild(tickS2);
+          var tS = ns('text'); tS.setAttribute('x', (sx1+sx2)/2); tS.setAttribute('y', originY + gridPxH + 28); tS.setAttribute('fill','#0f172a'); tS.setAttribute('font-size','11'); tS.setAttribute('text-anchor','middle'); tS.textContent = 'S = ' + formatNumber(spacingX,2) + ' m'; svg.appendChild(tS);
+        }
+        // vertical spacing annotation between first two horizontal conductors (Sy)
+        if (divY >= 1) {
+          var sy1 = originY + 0 * spacingY * scale;
+          var sy2 = originY + 1 * spacingY * scale;
+          var dimV = ns('line');
+          dimV.setAttribute('x1', originX - 24); dimV.setAttribute('y1', sy1);
+          dimV.setAttribute('x2', originX - 24); dimV.setAttribute('y2', sy2);
+          dimV.setAttribute('stroke','#0f172a'); dimV.setAttribute('stroke-width','1'); dimV.setAttribute('opacity','0.45'); svg.appendChild(dimV);
+          var tickV1 = ns('line'); tickV1.setAttribute('x1', originX - 28); tickV1.setAttribute('y1', sy1); tickV1.setAttribute('x2', originX - 20); tickV1.setAttribute('y2', sy1); tickV1.setAttribute('stroke','#0f172a'); tickV1.setAttribute('stroke-width','1'); svg.appendChild(tickV1);
+          var tickV2 = ns('line'); tickV2.setAttribute('x1', originX - 28); tickV2.setAttribute('y1', sy2); tickV2.setAttribute('x2', originX - 20); tickV2.setAttribute('y2', sy2); tickV2.setAttribute('stroke','#0f172a'); tickV2.setAttribute('stroke-width','1'); svg.appendChild(tickV2);
+          var tV = ns('text'); var tx = originX - 34; var ty = (sy1 + sy2)/2; tV.setAttribute('x', tx); tV.setAttribute('y', ty); tV.setAttribute('fill','#0f172a'); tV.setAttribute('font-size','11'); tV.setAttribute('text-anchor','middle'); tV.setAttribute('transform','rotate(-90 '+tx+' '+ty+')'); tV.textContent = 'Sy = ' + formatNumber(spacingY,2) + ' m'; svg.appendChild(tV);
+        }
+      }
+
+      // place rods distributed along perimeter
+      if (rodCount > 0) {
+        var perim = 2*(L+W);
+        for (var k=0;k<rodCount;k++) {
+          var frac = k / rodCount;
+          var dist = frac * perim;
+          var x=0,y=0;
+          if (dist <= L) { x = dist; y = 0; }
+          else if (dist <= L+W) { x = L; y = dist - L; }
+          else if (dist <= 2*L+W) { x = L - (dist - (L+W)); y = W; }
+          else { x = 0; y = W - (dist - (2*L+W)); }
+          var px = originX + x*scale;
+          var py = originY + y*scale;
+          var c = ns('circle');
+          c.setAttribute('cx', px); c.setAttribute('cy', py); c.setAttribute('r', 6);
+          c.setAttribute('fill', '#ff6b6b'); c.setAttribute('stroke','#c33'); c.setAttribute('stroke-width','1');
+          svg.appendChild(c);
+        }
+      }
+      // debug scale text removed (no visible overlay)
+      
+    }
+
+    function resetInputs() {
+      // Reset inputs to blank / placeholder selections
+      var setVal = function(id, v){ var el = document.getElementById(id); if (el) el.value = v; };
+      // Numeric inputs -> blank
+      ['faultCurrent','clearingTime','soilResistivity','surfaceResistivity','surfaceThickness','shockDuration','gridLength','gridWidth','gridDepth','currentDivision','conductorsX','conductorsY','xrRatio','rodLength','rodRadius','rodCount','rodSpacing','ambientTemp'].forEach(function(id){ setVal(id, ''); });
+      // Selects -> blank (placeholder option has value="")
+      ['gridType','surfaceMaterial','surfaceMoisture','conductorMaterial','bodyWeight','frequency','layoutMode','rodMaterial'].forEach(function(id){ setVal(id, ''); });
+      // ensure numeric input is editable after reset
+      var inp = document.getElementById('surfaceResistivity'); if (inp) inp.disabled = false;
+      // update manual layout visibility and surface material state
+      try { handleGridTypeChange(); } catch (e) {}
+      try { handleLayoutModeChange(); } catch (e) {}
+      try { handleSurfaceMaterialChange(); } catch (e) {}
+
+      // Reset visible result cards back to '-'
+      ['reflectionFactor','surfaceDerating','E_step','E_touch','materialConstant','materialKo','materialTCAP','materialAlpha','materialRho','materialTm','gridCurrentSizing','clearingTimeSizing','conductorArea','conductorDiameter','gridRodLengthNoteValue','dfValue','taValue'].forEach(function(id){ var el = document.getElementById(id); if (el) el.textContent = '-'; });
+    }
+
+    function handleLayoutModeChange() {
+      var lm = document.getElementById('layoutMode');
+      var manual = document.getElementById('manualCounts');
+      if (!lm || !manual) return;
+      var layoutMode = lm.value || 'manual';
+      if (layoutMode === 'manual') {
+        manual.style.display = 'flex';
+      } else {
+        manual.style.display = 'none';
+      }
+      calculateEarthing();
+    }
+
+    function handleGridTypeChange() {
+      var gridType = (document.getElementById('gridType') || {}).value || 'uniform';
+      var lengthField = document.getElementById('gridLengthField');
+      var widthField = document.getElementById('gridWidthField');
+      if (gridType === 'uniform') {
+        lengthField.style.display = 'flex';
+        widthField.style.display = 'flex';
+      } else {
+        lengthField.style.display = 'none';
+        widthField.style.display = 'none';
+      }
+      calculateEarthing();
+    }
+
+    document.getElementById('gridType').addEventListener('change', handleGridTypeChange);
+    var calcTopBtn = document.getElementById('calculateBtn'); if (calcTopBtn) calcTopBtn.addEventListener('click', function(){ gridSummaryEnabled = true; calculateEarthing(); });
+    var resetTopBtn = document.getElementById('resetBtn'); if (resetTopBtn) resetTopBtn.addEventListener('click', function(){ gridSummaryEnabled = false; resetInputs(); clearGridSummary(); });
+    var calcBottom = document.getElementById('calculateBtnBottom'); if (calcBottom) calcBottom.addEventListener('click', function(){ gridSummaryEnabled = true; calculateEarthing(); });
+    var resetBottom = document.getElementById('resetBtnBottom'); if (resetBottom) resetBottom.addEventListener('click', function(){ gridSummaryEnabled = false; resetInputs(); clearGridSummary(); });
+    ['faultCurrent','clearingTime','shockDuration','conductorMaterial','ambientTemp','soilResistivity','surfaceResistivity','surfaceThickness','gridLength','gridWidth','gridDepth','currentDivision','bodyWeight','frequency','xrRatio','rodMaterial','rodLength','rodRadius','rodCount','rodSpacing','layoutMode','conductorsX','conductorsY'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('input', calculateEarthing);
+    });
+    var surfSel = document.getElementById('surfaceMaterial');
+    if (surfSel) surfSel.addEventListener('change', handleSurfaceMaterialChange);
+    var surfMoist = document.getElementById('surfaceMoisture');
+    if (surfMoist) surfMoist.addEventListener('change', handleSurfaceMaterialChange);
+    var lm = document.getElementById('layoutMode'); if (lm) lm.addEventListener('change', handleLayoutModeChange);
+
+    // initialise surface resistivity input enabled/disabled state
+    handleSurfaceMaterialChange();
+    // initialise layout mode visibility
+    handleLayoutModeChange();
+    // Do not auto-run initial calculation; wait for user inputs to trigger updates.
+    // Global error handlers: log to console only (avoid showing error banners in the UI)
+    window.addEventListener('error', function(ev){
+      try { console.error('Uncaught error', ev && ev.message ? ev.message : ev); } catch(e) {}
+    });
+    window.addEventListener('unhandledrejection', function(ev){
+      try { console.warn('Unhandled rejection', ev && ev.reason ? ev.reason : ev); } catch(e) {}
+    });
+    // PDF generation: try local jsPDF bundle first, then fall back to CDN
+    function loadJsPDF(callback) {
+      if (window.jspdf && window.jspdf.jsPDF) return callback();
+      var tryLocal = function(src, onload, onerror) {
+        var s = document.createElement('script');
+        s.src = src;
+        s.onload = onload;
+        s.onerror = onerror;
+        document.head.appendChild(s);
+      };
+      // attempt to load a local bundle at libs/jspdf.umd.min.js (user can place it there)
+      tryLocal('libs/jspdf.umd.min.js', function() {
+        if (window.jspdf && window.jspdf.jsPDF) return callback();
+        // local loaded but not exposing expected symbol, fall back to CDN
+        tryLocal('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', callback, function() { alert('Failed to load jsPDF from local and CDN'); });
+      }, function() {
+        // local load failed; try CDN
+        tryLocal('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', callback, function() { alert('Failed to load jsPDF from CDN'); });
+      });
+    }
+
+    function downloadDetailedPDF() {
+      try { calculateEarthing(); } catch (e) {}
+      loadJsPDF(async function(){
+        try {
+          var jsPDF = window.jspdf && window.jspdf.jsPDF ? window.jspdf.jsPDF : null;
+          if (!jsPDF) throw new Error('jsPDF not available');
+
+          // attempt to capture SVG as PNG image for embedding
+          var svg = document.getElementById('layoutSvg');
+          var imgData = null;
+          if (svg) {
+            try {
+              var clone = svg.cloneNode(true);
+              var serializer = new XMLSerializer();
+              var svgString = serializer.serializeToString(clone);
+              var svgBlob = new Blob([svgString], {type: 'image/svg+xml;charset=utf-8'});
+              var url = URL.createObjectURL(svgBlob);
+              var img = new Image();
+              await new Promise(function(resolve, reject){ img.onload = resolve; img.onerror = reject; img.src = url; });
+              var canvas = document.createElement('canvas');
+              canvas.width = img.width || 1200; canvas.height = img.height || 900;
+              var ctx = canvas.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              imgData = canvas.toDataURL('image/png');
+              URL.revokeObjectURL(url);
+            } catch (e) { console.warn('SVG embed failed, continuing without image:', e && e.message ? e.message : e); imgData = null; }
+          }
+
+          var doc = new jsPDF({unit:'pt', format:'a4'});
+          var pageW = doc.internal.pageSize.getWidth();
+          var margin = 40;
+          var y = margin;
+
+          if (imgData) {
+            var props = doc.getImageProperties(imgData);
+            var iw = Math.min(pageW - margin*2, props.width * 0.5);
+            var ih = (props.height * iw) / props.width;
+            doc.addImage(imgData, 'PNG', margin, y, iw, ih);
+            y += ih + 12;
+          }
+
+          doc.setFontSize(14); doc.setFont(undefined,'bold'); doc.text('IEEE Std 80 — Earthing Detailed Calculations', margin, y);
+          y += 18; doc.setFontSize(10); doc.setFont(undefined,'normal');
+
+          function writeKV(label, value) {
+            doc.setFont(undefined,'bold'); doc.text(label, margin, y);
+            doc.setFont(undefined,'normal'); doc.text(String(value), margin + 260, y);
+            y += 14;
+            if (y > doc.internal.pageSize.getHeight() - margin) { doc.addPage(); y = margin; }
+          }
+
+          var rho = numberValue('soilResistivity', 0);
+          var rho_s = numberValue('surfaceResistivity', 0);
+          var L = Math.max(numberValue('gridLength', 0), 0);
+          var W = Math.max(numberValue('gridWidth', 0), 0);
+          var h = Math.max(numberValue('gridDepth', 0.6), 0.0001);
+          var If = numberValue('faultCurrent', 0);
+          var t = Math.max(numberValue('clearingTime', 0.5), 0.0001);
+          var Sf = Math.min(Math.max(numberValue('currentDivision', 0.6), 0), 1);
+          var layout = (document.getElementById('layoutMode') || {}).value || 'manual';
+          var nx = Math.max(2, Math.round(numberValue('conductorsX', 2)));
+          var ny = Math.max(2, Math.round(numberValue('conductorsY', 2)));
+          var rodCountVal = Math.max(parseInt((document.getElementById('rodCount')||{}).value)||0,0);
+          var rodLen = Math.max(parseFloat((document.getElementById('rodLength')||{}).value)||0,0);
+
+          var divX = Math.max(1, nx - 1); var divY = Math.max(1, ny - 1); var sX = L / divX; var sY = W / divY;
+          var LC = (L * ny) + (W * nx); var LR = rodLen * rodCountVal;
+          var freq = numberValue('frequency',50); var xr = Math.max(numberValue('xrRatio',10), 0.0001); var omega = 2 * Math.PI * Math.max(freq, 0.0001);
+          var Ta = xr / omega; var ts = Math.max(numberValue('shockDuration', NaN) || t, t);
+          var Df = 1; if (Ta > 0 && ts > 0) { var expTerm = Math.exp(-2 * ts / Ta); Df = Math.sqrt(1 + (Ta / ts) * (1 - expTerm)); }
+          var IG = Sf * Df * If;
+          var Kh = Math.sqrt(1 + (h / 1)); var nParallel = Math.max(1, divX * divY);
+          var Ki = (rodCountVal > 0) ? 1 : (1 / Math.pow(2 * nParallel, 1 / nParallel));
+          var condDiamText = (document.getElementById('conductorDiameter')||{}).textContent || '0'; var condDiaNum = parseFloat(condDiamText.replace(/[^0-9.\-]/g,'')) || 0;
+          var condDiaM = Math.max(condDiaNum / 1000, 0.000001);
+          var km1 = Math.log((sX * sX) / (16 * h * condDiaM)); var km2 = Math.pow(sX + 2 * h, 2) / (8 * sX * condDiaM);
+          var km3 = h / (4 * condDiaM); var km4 = (Ki / Kh) * Math.log(8 / (Math.PI * (2 * nParallel - 1)));
+          var Km = (1 / (2 * Math.PI)) * (km1 + km2 - km3 + km4);
+          var maxDist = Math.sqrt(L*L + W*W);
+          var LM = LC; if (rodCountVal > 0) { LM = LC + (1.55 + 1.22 * (rodLen / Math.max(maxDist,0.000001))) * LR; }
+          var Em = (rho * Km * Ki * IG) / Math.max(LM, 0.000001);
+          var Ls = 0.75 * LC + 0.85 * LR; var ks1 = 1 / (2 * h); var ks2 = 1 / (sX + h); var ks3 = (1 / sX) * (1 - Math.pow(0.5, Math.max(nParallel - 2, 0)));
+          var Ks = (1 / Math.PI) * (ks1 + ks2 + ks3); var Es = (rho * Ks * Ki * IG) / Math.max(Ls, 0.000001);
+
+          doc.setFontSize(11); doc.setFont(undefined,'bold'); doc.text('Inputs', margin, y); y += 14; doc.setFontSize(9); doc.setFont(undefined,'normal');
+          writeKV('Soil resistivity ρ (Ω·m)', rho); writeKV('Surface resistivity ρs (Ω·m)', rho_s);
+          writeKV('Grid L × W (m)', L + ' × ' + W); writeKV('Grid depth h (m)', h);
+          writeKV('Fault current If (A)', If); writeKV('Clearing time t (s)', t);
+          writeKV('Shock duration ts (s)', ts); writeKV('Current division Sf', Sf);
+          writeKV('Layout mode', layout); writeKV('Conductors (X × Y)', nx + ' × ' + ny);
+          writeKV('Total conductor length LC (m)', LC.toFixed(3)); writeKV('Rod count', rodCountVal);
+          writeKV('Rod length Lr (m), total LR (m)', rodLen + ' ; ' + LR.toFixed(3));
+
+          if (y > doc.internal.pageSize.getHeight() - margin) { doc.addPage(); y = margin; }
+          doc.setFontSize(11); doc.setFont(undefined,'bold'); doc.text('Formulas & Step Calculations', margin, y); y += 14; doc.setFontSize(9); doc.setFont(undefined,'normal');
+          writeKV('Mesh voltage formula', 'Em = ρ × Km × Ki × IG / LM');
+          writeKV('IG (A)', Sf + ' × ' + Df.toFixed(4) + ' × ' + If + ' = ' + IG.toFixed(4));
+          writeKV('Km terms (km1,km2,km3,km4)', km1.toFixed(4) + ', ' + km2.toFixed(4) + ', ' + km3.toFixed(4) + ', ' + km4.toFixed(4));
+          writeKV('Km', Km.toFixed(6)); writeKV('Ki', Ki); writeKV('LM (m)', LM.toFixed(4)); writeKV('Em (V)', Em.toFixed(4));
+          if (y > doc.internal.pageSize.getHeight() - margin) { doc.addPage(); y = margin; }
+          writeKV('Step voltage formula', 'Es = ρ × Ks × Ki × IG / Ls'); writeKV('Ls (m)', Ls.toFixed(4));
+          writeKV('Ks terms (ks1,ks2,ks3)', ks1.toFixed(4) + ', ' + ks2.toFixed(4) + ', ' + ks3.toFixed(4)); writeKV('Ks', Ks.toFixed(6)); writeKV('Es (V)', Es.toFixed(4));
+          if (y > doc.internal.pageSize.getHeight() - margin) { doc.addPage(); y = margin; }
+          doc.setFontSize(9); doc.text('Notes: These calculations mirror the simplified expressions from IEEE Std 80 and the tool model. Use full standard methods for final designs.', margin, y);
+          doc.save('ieee80_earthing_detailed_calculation.pdf');
+        } catch (e) { alert('Failed to generate PDF: ' + (e && e.message ? e.message : e)); }
+      });
+    }
+
+    var downloadBtn = document.getElementById('downloadPdfBtn'); if (downloadBtn) downloadBtn.addEventListener('click', downloadDetailedPDF);
+        function downloadLaTeXSource() {
+          try { calculateEarthing(); } catch (e) {}
+          // gather values
+          var rho = numberValue('soilResistivity', 0);
+          var rho_s = numberValue('surfaceResistivity', 0);
+          var L = Math.max(numberValue('gridLength', 0), 0);
+          var W = Math.max(numberValue('gridWidth', 0), 0);
+          var h = Math.max(numberValue('gridDepth', 0.6), 0.0001);
+          var If = numberValue('faultCurrent', 0);
+          var t = Math.max(numberValue('clearingTime', 0.5), 0.0001);
+          var Sf = Math.min(Math.max(numberValue('currentDivision', 0.6), 0), 1);
+          var nx = Math.max(2, Math.round(numberValue('conductorsX', 2)));
+          var ny = Math.max(2, Math.round(numberValue('conductorsY', 2)));
+          var rodCountVal = Math.max(parseInt((document.getElementById('rodCount')||{}).value)||0,0);
+          var rodLen = Math.max(parseFloat((document.getElementById('rodLength')||{}).value)||0,0);
+
+          var divX = Math.max(1, nx - 1); var divY = Math.max(1, ny - 1);
+          var sX = L / divX; var sY = W / divY;
+          var LC = (L * ny) + (W * nx);
+          var LR = rodLen * rodCountVal;
+
+          var freq = numberValue('frequency',50); var xr = Math.max(numberValue('xrRatio',10), 0.0001); var omega = 2 * Math.PI * Math.max(freq, 0.0001);
+          var Ta = xr / omega; var ts = Math.max(numberValue('shockDuration', NaN) || t, t);
+          var Df = 1; if (Ta > 0 && ts > 0) { var expTerm = Math.exp(-2 * ts / Ta); Df = Math.sqrt(1 + (Ta / ts) * (1 - expTerm)); }
+          var IG = Sf * Df * If;
+
+          var Kh = Math.sqrt(1 + (h / 1)); var nParallel = Math.max(1, divX * divY);
+          var Ki = (rodCountVal > 0) ? 1 : (1 / Math.pow(2 * nParallel, 1 / nParallel));
+
+          var condDiamText = (document.getElementById('conductorDiameter')||{}).textContent || '0'; var condDiaNum = parseFloat(condDiamText.replace(/[^0-9.\-]/g,'')) || 0; var condDiaM = Math.max(condDiaNum / 1000, 0.000001);
+          var km1 = Math.log((sX * sX) / (16 * h * condDiaM)); var km2 = Math.pow(sX + 2 * h, 2) / (8 * sX * condDiaM);
+          var km3 = h / (4 * condDiaM); var km4 = (Ki / Kh) * Math.log(8 / (Math.PI * (2 * nParallel - 1)));
+          var Km = (1 / (2 * Math.PI)) * (km1 + km2 - km3 + km4);
+
+          var maxDist = Math.sqrt(L*L + W*W);
+          var LM = LC; if (rodCountVal > 0) { LM = LC + (1.55 + 1.22 * (rodLen / Math.max(maxDist,0.000001))) * LR; }
+          var Em = (rho * Km * Ki * IG) / Math.max(LM, 0.000001);
+          var Ls = 0.75 * LC + 0.85 * LR; var ks1 = 1 / (2 * h); var ks2 = 1 / (sX + h); var ks3 = (1 / sX) * (1 - Math.pow(0.5, Math.max(nParallel - 2, 0)));
+          var Ks = (1 / Math.PI) * (ks1 + ks2 + ks3); var Es = (rho * Ks * Ki * IG) / Math.max(Ls, 0.000001);
+
+          // build LaTeX source
+          var tex = '';
+          tex += '\\documentclass[11pt,a4paper]{article}\n';
+          tex += '\\usepackage[margin=25mm]{geometry}\\usepackage{amsmath,siunitx,graphicx}\n';
+          tex += '\\sisetup{separate-uncertainty=false,detect-all}\\begin{document}\n';
+          tex += '\\section*{IEEE Std 80 — Earthing Detailed Calculations}\\n';
+          tex += '\\subsection*{Inputs}\\n';
+          tex += '\\begin{tabular}{ll}\\textbf{Soil resistivity }$\\rho$ & ' + rho + ' $\\mathrm{\\Omega\\cdot m}$\\\\\\n';
+          tex += '\\textbf{Surface resistivity }$\\rho_s$ & ' + rho_s + ' $\\mathrm{\\Omega\\cdot m}$\\\\\\n';
+          tex += '\\textbf{Grid dimensions }$L\\times W$ & ' + L + ' m $\\times$ ' + W + ' m\\\\\\n';
+          tex += '\\textbf{Grid depth }$h$ & ' + h + ' m\\\\\\n';
+          tex += '\\textbf{Fault current }$I_f$ & ' + If + ' A\\\\\\n';
+          tex += '\\textbf{Clearing time }$t$ & ' + t + ' s\\\\\\n';
+          tex += '\\textbf{Shock duration }$t_s$ & ' + ts + ' s\\\\\\n';
+          tex += '\\textbf{Current division }$S_f$ & ' + Sf + '\\%\\\\\\n';
+          tex += '\\textbf{Conductors }$N_x\\times N_y$ & ' + nx + ' $\\times$ ' + ny + '\\\\\\n';
+          tex += '\\textbf{Total conductor length }$L_C$ & ' + LC.toFixed(3) + ' m\\\\\\n';
+          tex += '\\textbf{Rod count / length }$N_r$ / $L_r$ & ' + rodCountVal + ' / ' + rodLen + ' m\\\\\\n';
+          tex += '\\end{tabular}\\n';
+
+          tex += '\\subsection*{Formulas and Step Calculations}\\n';
+          tex += '\\paragraph{Mesh voltage} The mesh (touch) voltage is approximated by\\\\n';
+          tex += '$$E_m = \\frac{\\rho \\, K_m \\, K_i \\, I_G}{L_M}$$\\\\n';
+          tex += 'where $I_G = S_f \\times D_f \\times I_f$.\\\\n';
+          tex += 'Computed values:\\n';
+          tex += '$I_G = ' + IG.toFixed(4) + '\\;\\mathrm{A}\\\\n';
+          tex += '$K_m$ terms: km1=' + km1.toFixed(4) + ', km2=' + km2.toFixed(4) + ', km3=' + km3.toFixed(4) + ', km4=' + km4.toFixed(4) + '\\n';
+          tex += '$K_m = ' + Km.toFixed(6) + '$, $K_i = ' + Ki + '$, $L_M = ' + LM.toFixed(4) + '\\;\\mathrm{m}$.\\\\n';
+          tex += '\\[1ex] Result: $E_m = ' + Em.toFixed(4) + '\\;\\mathrm{V}\\\\n';
+
+          tex += '\\paragraph{Step voltage} The step voltage is approximated by\\\\n';
+          tex += '$$E_s = \\frac{\\rho \\, K_s \\, K_i \\, I_G}{L_s}$$\\\\n';
+          tex += 'with $L_s = 0.75 L_C + 0.85 L_R$. Computed values: $L_s = ' + Ls.toFixed(4) + '\\;\\mathrm{m}$\\\\n';
+          tex += '$K_s$ terms: ' + ks1.toFixed(4) + ', ' + ks2.toFixed(4) + ', ' + ks3.toFixed(4) + ', $K_s=' + Ks.toFixed(6) + '$\\\\n';
+          tex += '\\[1ex] Result: $E_s = ' + Es.toFixed(4) + '\\;\\mathrm{V}\\\\n';
+
+          tex += '\\section*{Notes}\\n';
+          tex += 'These calculations are based on simplified expressions reflecting the tool model and IEEE Std 80 guidance. Use the full standard for detailed designs.\\\\n';
+          tex += '\\end{document}';
+
+          var blob = new Blob([tex], {type: 'application/x-tex'});
+          var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'ieee80_earthing_calculation.tex'; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+        }
+    // do a first-pass calculation on load so the grid is visible with default inputs
+    clearGridSummary();
+    try { calculateEarthing(); } catch(e) { console.warn('Initial calculateEarthing failed', e); }
+  </script>
+
+  <!-- Results (final section) -->
+  <section class="panel" style="grid-column: 1 / -1; margin-top:18px;">
+    <div class="panel-header">
+      <strong>Results</strong>
+    </div>
+    <div class="panel-body">
+      <div class="results-grid">
+        <div class="result-card pass wide"><div class="label">Safety check</div><div class="value" id="safetyStatus">Ready to calculate</div></div>
+      </div>
+
+      <table class="mini-table">
+        <tr><td>Approximate equivalent conductor length</td><td id="equivalentLength">0.00 m</td></tr>
+        <tr><td>Estimated mesh density factor</td><td id="meshDensity">0.00</td></tr>
+        <tr><td>Soil resistivity, ρ (Ω·m)</td><td id="soilResDisplay">0.00 Ω·m</td></tr>
+        <tr><td>Surface resistivity, ρs (Ω·m)</td><td id="surfaceResDisplay">0.00 Ω·m</td></tr>
+        <tr><td>Decrement factor, Df</td><td id="dfValue">1.00</td></tr>
+        <tr><td>DC offset time constant, Ta (s)</td><td id="taValue">0.00 s</td></tr>
+        <tr><td>Surface derating factor</td><td id="surfaceFactor">0.00</td></tr>
+        <tr><td>Touch voltage margin</td><td id="touchMargin">0.00 V</td></tr>
+        <tr><td>Step voltage margin</td><td id="stepMargin">0.00 V</td></tr>
+      </table>
+
+      <div class="summary" id="resultSummary">
+        Enter the inputs and press Calculate to evaluate the earthing design.
+      </div>
+      <div style="margin-top:12px;">
+        <button class="btn btn-primary" id="downloadPdfBtn" type="button">Download Detailed PDF</button>
+      </div>
+    </div>
+  </section>
+  </section>
+
+    
+
+  </body>
+</html>

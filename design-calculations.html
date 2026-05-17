@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Design Calculations - Sai Deepak Kothula</title>
+    <link href="https://fonts.googleapis.com/css?family=Montserrat:400,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+      .page-shell {
+        max-width: 1100px;
+        margin: 40px auto;
+        padding: 0 16px;
+      }
+      .hero-card {
+        background: linear-gradient(135deg, #f7fafd 0%, #ffffff 100%);
+        border-radius: 20px;
+        padding: 28px;
+        box-shadow: 0 8px 28px rgba(25,118,210,0.08);
+      }
+      .section-title {
+        margin: 0 0 12px 0;
+        color: #1976d2;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .calculator-card {
+        margin-top: 22px;
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 22px;
+        border: 1px solid #e3eefb;
+        box-shadow: 0 4px 18px rgba(25,118,210,0.06);
+      }
+      .calculator-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin-top: 18px;
+      }
+      .calc-input {
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: 10px;
+        border: 1px solid #cfe0f5;
+        font: inherit;
+        box-sizing: border-box;
+        background: #fbfdff;
+      }
+      .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border: none;
+        border-radius: 10px;
+        background: #1976d2;
+        color: #fff;
+        padding: 12px 18px;
+        font-weight: 700;
+        cursor: pointer;
+        text-decoration: none;
+      }
+      .btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border: 1px solid #cfe0f5;
+        border-radius: 10px;
+        background: #fff;
+        color: #1976d2;
+        padding: 12px 18px;
+        font-weight: 700;
+        text-decoration: none;
+      }
+      .note-box {
+        margin-top: 16px;
+        padding: 14px 16px;
+        border-radius: 12px;
+        background: #f3f8fe;
+        border-left: 4px solid #1976d2;
+        color: #334155;
+        line-height: 1.7;
+      }
+      @media (max-width: 700px) {
+        .hero-card, .calculator-card { padding: 20px; }
+      }
+    </style>
+</head>
+<body>
+    <div class="page-shell">
+        <section class="hero-card">
+            <h1 class="section-title">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#1976d2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="8" y2="10"/><line x1="12" y1="10" x2="12" y2="10"/><line x1="16" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/><line x1="16" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="16" y2="18"/></svg>
+                Design Calculations
+            </h1>
+            <p style="color:#44546a;line-height:1.8;max-width:900px;margin:0;">
+                This section is for engineering calculation tools. The first module is an IEEE Std 80 earthing design calculator, which opens a dedicated GUI page for entering project parameters and viewing preliminary grounding results.
+            </p>
+
+            <div class="calculator-card">
+                <h2 style="margin:0 0 10px 0;color:#0f172a;">IEEE 80 Earthing Calculation</h2>
+                <p style="margin:0;color:#44546a;line-height:1.7;max-width:900px;">
+                    Use the calculator to enter fault current, clearing time, soil resistivity, grid dimensions, and surface layer data. The next page will calculate key grounding indicators such as grid area, estimated grid current, approximate grid resistance, ground potential rise, and allowable touch and step voltages.
+                </p>
+
+                <div class="note-box">
+                    <strong>Design workflow:</strong> field data, conductor sizing, touch and step criteria, initial design, grid resistance, grid current, mesh and step voltage checks, then final detail design.
+                </div>
+
+                <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:18px;">
+                    <a class="btn-primary" href="ieee80-earthing-calculator.html">Calculate Earthing Design</a>
+                    <a class="btn-secondary" href="index.html#design-calculations">Back to Portfolio</a>
+                </div>
+            </div>
+        </section>
+    </div>
+</body>
+</html>
